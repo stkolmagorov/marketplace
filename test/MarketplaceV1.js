@@ -58,12 +58,12 @@ describe("MarketplaceV1", () => {
             Marketplace, 
             [
                 [firstCommissionRecipient.address, secondCommissionRecipient.address],
-                [erc20MockInstance.address],
                 [3000, 7000],
+                [erc20MockInstance.address],
                 authorizer.address,
                 500
             ],
-            { initializer: "initialize" }
+            { initializer: "initialize", kind: "uups" }
         );
         await erc721MockSimpleInstance.setApprovalForAll(marketplaceInstance.address, true);
         await erc721MockInstance.setApprovalForAll(marketplaceInstance.address, true);
@@ -104,8 +104,8 @@ describe("MarketplaceV1", () => {
         // Attempt to initialize again
         await expect(marketplace.initialize(
             [firstCommissionRecipient.address, secondCommissionRecipient.address],
-            [erc20Mock.address],
             [3000, 7000],
+            [erc20Mock.address],
             authorizer.address,
             500
         )).to.be.revertedWith("Initializable: contract is already initialized");
@@ -156,10 +156,6 @@ describe("MarketplaceV1", () => {
             .to.be.revertedWith(
                 `AccessControl: account ${(alice.address).toLowerCase()} is missing role ${await marketplace.DEFAULT_ADMIN_ROLE()}`
             );
-        // Attempt to update with the same address
-        await expect(marketplace.updateAuthorizer(authorizer.address)).to.be.revertedWith("InvalidAuthorizer");
-        // Attempt to update with zero address
-        await expect(marketplace.updateAuthorizer(ethers.constants.AddressZero)).to.be.revertedWith("InvalidAuthorizer");
         // Successful updating
         await marketplace.updateAuthorizer(owner.address);
         expect(await marketplace.authorizer()).to.equal(owner.address);

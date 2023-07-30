@@ -6,13 +6,13 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpg
 import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/interfaces/IERC2981.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 
 import "./interfaces/IMarketplaceV1.sol";
 import "./interfaces/IRoyaltySplitter.sol";
@@ -25,23 +25,23 @@ contract MarketplaceV1 is
     ReentrancyGuardUpgradeable, 
     AccessControlUpgradeable 
 {
-    using Counters for Counters.Counter;
-    using ECDSA for bytes32;
-    using Address for address payable;
-    using SafeERC20 for IERC20;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
+    using ECDSAUpgradeable for bytes32;
+    using AddressUpgradeable for address payable;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 public constant BASE_PERCENTAGE = 10000;
     uint256 public constant MAXIMUM_COMMISSION_PERCENTAGE = 1000;
     bytes32 public constant SALE_HASH = keccak256("SALE");
     bytes32 public constant AUCTION_HASH = keccak256("AUCTION");
-    bytes4 public constant ERC_2981_INTERFACE_ID = type(IERC2981).interfaceId;
+    bytes4 public constant ERC_2981_INTERFACE_ID = type(IERC2981Upgradeable).interfaceId;
     bytes4 public constant ROYALTY_SPLITTER_INTERFACE_ID = type(IRoyaltySplitter).interfaceId;
 
     // V1
     address public authorizer;
     uint256 public commissionPercentage;
-    Counters.Counter private _saleId;
-    Counters.Counter private _auctionId;
+    CountersUpgradeable.Counter private _saleId;
+    CountersUpgradeable.Counter private _auctionId;
 
     mapping(bytes => bool) public notUniqueSignature;
     mapping(address => bool) public isSupportedCurrency;
@@ -50,15 +50,16 @@ contract MarketplaceV1 is
     mapping(uint256 => mapping(address => uint256)) public approvedPricePerTokenBySaleIdAndApprovedBuyer;
     CommissionRecipient[] public commissionRecipients;
 
+    /// @notice Initializes the contract.
     /// @param commissionRecipientAddresses_ Commission recipient addresses.
-    /// @param supportedCurrencies_ Supported currency addresses.
     /// @param commissionRecipientPercentages_ Commission recipient percentages.
+    /// @param supportedCurrencies_ Supported currency addresses.
     /// @param authorizer_ Authorizer address.
     /// @param commissionPercentage_ Commission percentage.
     function initialize(
         address payable[] calldata commissionRecipientAddresses_, 
-        address[] calldata supportedCurrencies_,
         uint256[] calldata commissionRecipientPercentages_,
+        address[] calldata supportedCurrencies_,
         address authorizer_,
         uint256 commissionPercentage_
     )
@@ -90,8 +91,15 @@ contract MarketplaceV1 is
         if (commissionPercentage_ > MAXIMUM_COMMISSION_PERCENTAGE) {
             revert MaximumCommissionPercentageWasExceeded(commissionPercentage_);
         }
+        emit CommissionPercentageWasUpdated(commissionPercentage, commissionPercentage_);
         commissionPercentage = commissionPercentage_;
-        emit CommissionPercentageWasUpdated(commissionPercentage_);
+    }
+
+    /// @notice Updates the authorizer.
+    /// @param authorizer_ New authorizer address.
+    function updateAuthorizer(address authorizer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        emit AuthorizerWasUpdated(authorizer, authorizer_);
+        authorizer = authorizer_;
     }
 
     /// @notice Removes `currencies_` from the list of supported currencies. 
@@ -110,16 +118,6 @@ contract MarketplaceV1 is
             delete isSupportedCurrency[currencies_[i]];
         }
         emit SupportedCurrenciesWereRemoved(currencies_);
-    }
-
-    /// @notice Updates the authorizer.
-    /// @param authorizer_ New authorizer address.
-    function updateAuthorizer(address authorizer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (authorizer == authorizer_ || authorizer_ == address(0)) {
-            revert InvalidAuthorizer();
-        }
-        authorizer = authorizer_;
-        emit AuthorizerWasUpdated(authorizer_);
     }
 
     /// @notice Creates sales.
@@ -158,14 +156,14 @@ contract MarketplaceV1 is
                 revert UnsupportedCurrencyEntry(paymentCurrencies_[i]);
             }
             if (isERC721_[i]) {
-                IERC721(tokens_[i]).safeTransferFrom(
+                IERC721Upgradeable(tokens_[i]).safeTransferFrom(
                     msg.sender, 
                     address(this), 
                     tokenIds_[i], 
                     ""
                 );
             } else {
-                IERC1155(tokens_[i]).safeTransferFrom(
+                IERC1155Upgradeable(tokens_[i]).safeTransferFrom(
                     msg.sender, 
                     address(this), 
                     tokenIds_[i], 
@@ -183,7 +181,7 @@ contract MarketplaceV1 is
                 0,
                 pricesPerToken_[i],
                 isERC721_[i],
-                IERC165(tokens_[i]).supportsInterface(ERC_2981_INTERFACE_ID),
+                IERC165Upgradeable(tokens_[i]).supportsInterface(ERC_2981_INTERFACE_ID),
                 Status.ACTIVE
             );
             _saleId.increment();
@@ -193,7 +191,7 @@ contract MarketplaceV1 is
 
     /// @notice Cancels sales.
     /// @param saleIds_ Sale ids.
-    function cancelSales(uint256[] calldata saleIds_) external onlyProxy {
+    function cancelSales(uint256[] calldata saleIds_) external nonReentrant onlyProxy {
         for (uint256 i = 0; i < saleIds_.length; i++) {
             SaleInfo storage saleInfo = sales[saleIds_[i]];
             if (msg.sender != saleInfo.seller) {
@@ -203,14 +201,14 @@ contract MarketplaceV1 is
                 revert InvalidStatus(saleInfo.status);
             }
             if (saleInfo.isERC721) {
-                IERC721(saleInfo.token).safeTransferFrom(
+                IERC721Upgradeable(saleInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender, 
                     saleInfo.tokenId, 
                     ""
                 );
             } else {
-                IERC1155(saleInfo.token).safeTransferFrom(
+                IERC1155Upgradeable(saleInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender, 
                     saleInfo.tokenId, 
@@ -294,7 +292,7 @@ contract MarketplaceV1 is
             }
             uint256 paymentAmount;
             uint256 approvedPrice = approvedPricePerTokenBySaleIdAndApprovedBuyer[saleIds_[i]][msg.sender];
-            if (approvedPrice != 0) {
+            if (approvedPrice > 0) {
                 paymentAmount = amountToPurchase * approvedPrice;
             } else {
                 paymentAmount = amountToPurchase * saleInfo.pricePerToken;
@@ -310,14 +308,14 @@ contract MarketplaceV1 is
                 saleInfo.isRoyaltySupported
             );
             if (isERC721) {
-                IERC721(saleInfo.token).safeTransferFrom(
+                IERC721Upgradeable(saleInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender,
                     saleInfo.tokenId, 
                     ""
                 );
             } else {
-                IERC1155(saleInfo.token).safeTransferFrom(
+                IERC1155Upgradeable(saleInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender, 
                     saleInfo.tokenId, 
@@ -334,7 +332,7 @@ contract MarketplaceV1 is
             }
             emit PaymentForSaleWasProcessed(msg.sender, paymentAmount, saleIds_[i]);
         }
-        if (msg.value - msgValueSpent > 0) {
+        if (msg.value > msgValueSpent) {
             payable(msg.sender).sendValue(msg.value - msgValueSpent);
         }
     }
@@ -378,20 +376,20 @@ contract MarketplaceV1 is
                 revert UnsupportedCurrencyEntry(paymentCurrencies_[i]);
             }
             if (
-                auctionTypes_[i] == AuctionType.COMMON && redemptionPrices_[i] != 0 ||
+                auctionTypes_[i] == AuctionType.COMMON && redemptionPrices_[i] > 0 ||
                 auctionTypes_[i] == AuctionType.EBAY && redemptionPrices_[i] == 0
             ) {
                 revert InvalidRedemptionPrice();
             }
             if (isERC721_[i]) {
-                IERC721(tokens_[i]).safeTransferFrom(
+                IERC721Upgradeable(tokens_[i]).safeTransferFrom(
                     msg.sender, 
                     address(this), 
                     tokenIds_[i], 
                     ""
                 );
             } else {
-                IERC1155(tokens_[i]).safeTransferFrom(
+                IERC1155Upgradeable(tokens_[i]).safeTransferFrom(
                     msg.sender, 
                     address(this), 
                     tokenIds_[i], 
@@ -410,7 +408,7 @@ contract MarketplaceV1 is
                 amountsToSale_[i],
                 redemptionPrices_[i],
                 isERC721_[i],
-                IERC165(tokens_[i]).supportsInterface(ERC_2981_INTERFACE_ID),
+                IERC165Upgradeable(tokens_[i]).supportsInterface(ERC_2981_INTERFACE_ID),
                 Status.ACTIVE,
                 auctionTypes_[i]
             );
@@ -421,7 +419,7 @@ contract MarketplaceV1 is
 
     /// @notice Cancels auctions.
     /// @param auctionIds_ Auction ids.
-    function cancelAuctions(uint256[] calldata auctionIds_) external onlyProxy {
+    function cancelAuctions(uint256[] calldata auctionIds_) external nonReentrant onlyProxy {
         for (uint256 i = 0; i < auctionIds_.length; i++) {
             uint256 auctionId = auctionIds_[i];
             AuctionInfo storage auctionInfo = auctions[auctionId];
@@ -432,14 +430,14 @@ contract MarketplaceV1 is
                 revert InvalidStatus(auctionInfo.status);
             }
             if (auctionInfo.isERC721) {
-                IERC721(auctionInfo.token).safeTransferFrom(
+                IERC721Upgradeable(auctionInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender, 
                     auctionInfo.tokenId, 
                     ""
                 );
             } else {
-                IERC1155(auctionInfo.token).safeTransferFrom(
+                IERC1155Upgradeable(auctionInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender, 
                     auctionInfo.tokenId, 
@@ -538,14 +536,14 @@ contract MarketplaceV1 is
                 auctionInfo.isRoyaltySupported
             );
             if (auctionInfo.isERC721) {
-                IERC721(auctionInfo.token).safeTransferFrom(
+                IERC721Upgradeable(auctionInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender, 
                     auctionInfo.tokenId, 
                     ""
                 );
             } else {
-                IERC1155(auctionInfo.token).safeTransferFrom(
+                IERC1155Upgradeable(auctionInfo.token).safeTransferFrom(
                     address(this), 
                     msg.sender, 
                     auctionInfo.tokenId, 
@@ -556,7 +554,7 @@ contract MarketplaceV1 is
             auctionInfo.status = Status.CLOSED;
             emit PaymentForAuctionWasProcessed(msg.sender, paymentAmount, auctionIds_[i]);
         }
-        if (msg.value - msgValueSpent > 0) {
+        if (msg.value > msgValueSpent) {
             payable(msg.sender).sendValue(msg.value - msgValueSpent);
         }
     } 
@@ -594,6 +592,7 @@ contract MarketplaceV1 is
         if (percentagesSum != BASE_PERCENTAGE) {
             revert InvalidPercentagesSum();
         }
+        CommissionRecipient[] memory m_commissionRecipients = commissionRecipients;
         delete commissionRecipients;
         for (uint256 i = 0; i < commissionRecipientAddresses_.length; i++) {
             if (commissionRecipientAddresses_[i] == address(0)) {
@@ -604,7 +603,7 @@ contract MarketplaceV1 is
                 commissionRecipientPercentages_[i]
             ));
         }
-        emit CommissionRecipientsWereUpdated(commissionRecipientAddresses_, commissionRecipientPercentages_);
+        emit CommissionRecipientsWereUpdated(m_commissionRecipients, commissionRecipients);
     }
 
     /// @notice Adds `currencies_` to the list of supported currencies. 
@@ -662,28 +661,30 @@ contract MarketplaceV1 is
         returns (uint256 msgValueSpent_)
     {
         if (paymentCurrency_ != address(0)) {
-            IERC20(paymentCurrency_).safeTransferFrom(msg.sender, address(this), paymentAmount_);
+            IERC20Upgradeable(paymentCurrency_).safeTransferFrom(msg.sender, address(this), paymentAmount_);
         }
         uint256 totalRoyaltyAmount;
         if (isRoyaltySupported_) {
             totalRoyaltyAmount = _processRoyalties(paymentCurrency_, token_, tokenId_, paymentAmount_);
         }
-        uint256 commissionAmount = paymentAmount_ * commissionPercentage_ / BASE_PERCENTAGE;
-        if (paymentCurrency_ != address(0)) {
-            IERC20(paymentCurrency_).safeTransfer(seller_, paymentAmount_ - totalRoyaltyAmount - commissionAmount);
-            for (uint256 i = 0; i < commissionRecipients_.length; i++) {
-                IERC20(paymentCurrency_).safeTransfer(
-                    commissionRecipients_[i].commissionRecipientAddress, 
-                    commissionAmount * commissionRecipients_[i].commissionRecipientPercentage / BASE_PERCENTAGE
-                );
-            }
-        } else {
-            msgValueSpent_ += paymentAmount_;
-            seller_.sendValue(paymentAmount_ - totalRoyaltyAmount - commissionAmount);
-            for (uint256 i = 0; i < commissionRecipients_.length; i++) {
-                commissionRecipients_[i].commissionRecipientAddress.sendValue(
-                    commissionAmount * commissionRecipients_[i].commissionRecipientPercentage / BASE_PERCENTAGE
-                );
+        unchecked {
+            uint256 commissionAmount = paymentAmount_ * commissionPercentage_ / BASE_PERCENTAGE;
+            if (paymentCurrency_ != address(0)) {
+                IERC20Upgradeable(paymentCurrency_).safeTransfer(seller_, paymentAmount_ - totalRoyaltyAmount - commissionAmount);
+                for (uint256 i = 0; i < commissionRecipients_.length; i++) {
+                    IERC20Upgradeable(paymentCurrency_).safeTransfer(
+                        commissionRecipients_[i].commissionRecipientAddress, 
+                        commissionAmount * commissionRecipients_[i].commissionRecipientPercentage / BASE_PERCENTAGE
+                    );
+                }
+            } else {
+                msgValueSpent_ += paymentAmount_;
+                seller_.sendValue(paymentAmount_ - totalRoyaltyAmount - commissionAmount);
+                for (uint256 i = 0; i < commissionRecipients_.length; i++) {
+                    commissionRecipients_[i].commissionRecipientAddress.sendValue(
+                        commissionAmount * commissionRecipients_[i].commissionRecipientPercentage / BASE_PERCENTAGE
+                    );
+                }
             }
         }
     }
@@ -705,17 +706,19 @@ contract MarketplaceV1 is
     {
         address payable[] memory recipients;
         uint256[] memory shares;
-        if (IERC165(token_).supportsInterface(ROYALTY_SPLITTER_INTERFACE_ID)) {
+        if (IERC165Upgradeable(token_).supportsInterface(ROYALTY_SPLITTER_INTERFACE_ID)) {
             uint256[] memory percentages;
             (recipients, percentages) = IRoyaltySplitter(token_).getRoyalties(tokenId_);
             shares = new uint256[](recipients.length);
-            for (uint256 i = 0; i < recipients.length; i++) {
-                uint256 share = paymentAmount_ * percentages[i] / BASE_PERCENTAGE;
-                shares[i] = share;
-                totalRoyaltyAmount_ += share;
+            unchecked {
+                for (uint256 i = 0; i < recipients.length; i++) {
+                    uint256 share = paymentAmount_ * percentages[i] / BASE_PERCENTAGE;
+                    shares[i] = share;
+                    totalRoyaltyAmount_ += share;
+                }
             }
         } else {
-            (address recipient, uint256 share) = IERC2981(token_).royaltyInfo(tokenId_, paymentAmount_);
+            (address recipient, uint256 share) = IERC2981Upgradeable(token_).royaltyInfo(tokenId_, paymentAmount_);
             recipients = new address payable[](1);
             shares = new uint256[](1);
             recipients[0] = payable(recipient);
@@ -724,7 +727,7 @@ contract MarketplaceV1 is
         }
         if (paymentCurrency_ != address(0)) {
             for (uint256 i = 0; i < recipients.length; i++) {
-                IERC20(paymentCurrency_).safeTransfer(recipients[i], shares[i]);
+                IERC20Upgradeable(paymentCurrency_).safeTransfer(recipients[i], shares[i]);
             }
         } else {
             for (uint256 i = 0; i < recipients.length; i++) {

@@ -41,7 +41,6 @@ interface IMarketplaceV1 {
 
     error MaximumCommissionPercentageWasExceeded(uint256 commissionPercentage);
     error ZeroAddressEntry();
-    error InvalidAuthorizer();
     error InvalidArrayLengths();
     error InvalidAmountOfTokensToSale();
     error UnsupportedCurrencyEntry(address unsupportedCurrency);
@@ -55,10 +54,10 @@ interface IMarketplaceV1 {
     error InvalidAuctionTypeForRedemption(uint256 auctionId);
     error InvalidPercentagesSum();
 
-    event CommissionPercentageWasUpdated(uint256 indexed newCommissionPercentage);
+    event CommissionPercentageWasUpdated(uint256 indexed oldCommissionPercentage, uint256 indexed newCommissionPercentage);
     event SupportedCurrenciesWereAdded(address[] indexed currencies);
     event SupportedCurrenciesWereRemoved(address[] indexed currencies);
-    event AuthorizerWasUpdated(address indexed newAuthorizer);
+    event AuthorizerWasUpdated(address indexed oldAuthorizer, address indexed newAuthorizer);
     event SaleWasCreated(address indexed seller, uint256 indexed saleId);
     event SaleWasCancelled(uint256 indexed saleId);
     event SaleWasResolved(
@@ -72,7 +71,7 @@ interface IMarketplaceV1 {
     event AuctionWasResolved(address indexed winner, uint256 indexed winningBid, uint256 indexed auctionId);
     event PaymentForAuctionWasProcessed(address indexed payer, uint256 indexed paymentAmount, uint256 indexed auctionId);
     event CommissionRecipientsWereUpdated(
-        address payable[] indexed newCommissionRecipientAddresses, 
-        uint256[] indexed newCommissionRecipientPercentages
+        CommissionRecipient[] indexed oldCommissionRecipients,
+        CommissionRecipient[] indexed newCommissionRecipients
     );
 }
