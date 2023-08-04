@@ -52,12 +52,7 @@ contract MarketplaceV1 is
     mapping(uint256 => mapping(address => uint256)) public approvedPricePerTokenBySaleIdAndApprovedBuyer;
     CommissionRecipient[] public commissionRecipients;
 
-    /// @notice Initializes the contract.
-    /// @param commissionRecipientAddresses_ Commission recipient addresses.
-    /// @param commissionRecipientPercentages_ Commission recipient percentages.
-    /// @param supportedCurrencies_ Supported currency addresses.
-    /// @param authorizer_ Authorizer address.
-    /// @param commissionPercentage_ Commission percentage.
+    /// @inheritdoc IMarketplaceV1
     function initialize(
         address payable[] calldata commissionRecipientAddresses_, 
         uint256[] calldata commissionRecipientPercentages_,
@@ -81,15 +76,8 @@ contract MarketplaceV1 is
         isSupportedCurrency[address(0)] = true;
     }
 
-    /// @notice Updates the commission percentage.
-    /// @dev Could be called only by the DEFAULT_ADMIN_ROLE.
-    /// @param commissionPercentage_ New commission percentage value.
-    function updateCommissionPercentage(
-        uint256 commissionPercentage_
-    ) 
-        external 
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    /// @inheritdoc IMarketplaceV1
+    function updateCommissionPercentage(uint256 commissionPercentage_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (commissionPercentage_ > MAXIMUM_COMMISSION_PERCENTAGE) {
             revert MaximumCommissionPercentageWasExceeded(commissionPercentage_);
         }
@@ -97,22 +85,14 @@ contract MarketplaceV1 is
         commissionPercentage = commissionPercentage_;
     }
 
-    /// @notice Updates the authorizer.
-    /// @param authorizer_ New authorizer address.
+    /// @inheritdoc IMarketplaceV1
     function updateAuthorizer(address authorizer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit AuthorizerWasUpdated(authorizer, authorizer_);
         authorizer = authorizer_;
     }
 
-    /// @notice Removes `currencies_` from the list of supported currencies. 
-    /// @dev Could be called only by the DEFAULT_ADMIN_ROLE.
-    /// @param currencies_ Currency addresses.
-    function removeSupportedCurrencies(
-        address[] calldata currencies_
-    ) 
-        external 
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    /// @inheritdoc IMarketplaceV1
+    function removeSupportedCurrencies(address[] calldata currencies_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         for (uint256 i = 0; i < currencies_.length; i++) {
             if (currencies_[i] == address(0)) {
                 revert ZeroAddressEntry();
@@ -122,14 +102,7 @@ contract MarketplaceV1 is
         emit SupportedCurrenciesWereRemoved(currencies_);
     }
 
-    /// @notice Creates sales.
-    /// @param paymentCurrencies_ Payment currency addresses 
-    /// (should be zero if the payment is supposed to be made in native currency).
-    /// @param tokens_ Token addresses (ERC721 or ERC1155).
-    /// @param tokenIds_ Token ids.
-    /// @param amountsToSale_ Amounts of tokens to sale.
-    /// @param pricesPerToken_ Prices per token.
-    /// @param isERC721_ Array of boolean values defining which token standard is being sold.
+    /// @inheritdoc IMarketplaceV1
     function createSales(
         address[] calldata paymentCurrencies_,
         address[] calldata tokens_,
@@ -191,8 +164,7 @@ contract MarketplaceV1 is
         }
     }
 
-    /// @notice Cancels sales.
-    /// @param saleIds_ Sale ids.
+    /// @inheritdoc IMarketplaceV1
     function cancelSales(uint256[] calldata saleIds_) external nonReentrant onlyProxy {
         for (uint256 i = 0; i < saleIds_.length; i++) {
             SaleInfo storage saleInfo = sales[saleIds_[i]];
@@ -223,11 +195,7 @@ contract MarketplaceV1 is
         }
     }
 
-    /// @notice Accepts bids on price for sale.
-    /// @param approvedBuyers_ Approved buyer addresses.
-    /// @param approvedPricesPerToken_ Approved prices per token.
-    /// @param signature_ Signature to verify the caller's permissions.
-    /// @param saleId_ Sale id.
+    /// @inheritdoc IMarketplaceV1
     function resolveSale(
         address[] calldata approvedBuyers_, 
         uint256[] calldata approvedPricesPerToken_,
@@ -264,9 +232,7 @@ contract MarketplaceV1 is
         emit SaleWasResolved(approvedBuyers_, approvedPricesPerToken_, saleId_);
     }
 
-    /// @notice Processes sales payments.
-    /// @param saleIds_ Sale ids.
-    /// @param amountsToPurchase_ Amounts of tokens to purchase.
+    /// @inheritdoc IMarketplaceV1
     function processPaymentsForSales(
         uint256[] calldata saleIds_, 
         uint256[] calldata amountsToPurchase_
@@ -339,15 +305,7 @@ contract MarketplaceV1 is
         }
     }
 
-    /// @notice Creates auctions.
-    /// @param paymentCurrencies_ Payment currency addresses 
-    /// (should be zero if the payment is supposed to be made in native currency).
-    /// @param tokens_ Token addresses (ERC721 or ERC1155).
-    /// @param tokenIds_ Token ids.
-    /// @param amountsToSale_ Amounts of tokens to sale.
-    /// @param redemptionPrices_ Instant redemption prices.
-    /// @param isERC721_ Array of boolean values defining which token standard is being sold.
-    /// @param auctionTypes_ Auction types.
+    /// @inheritdoc IMarketplaceV1
     function createAuctions(
         address[] calldata paymentCurrencies_,
         address[] calldata tokens_,
@@ -419,8 +377,7 @@ contract MarketplaceV1 is
         }
     }
 
-    /// @notice Cancels auctions.
-    /// @param auctionIds_ Auction ids.
+    /// @inheritdoc IMarketplaceV1
     function cancelAuctions(uint256[] calldata auctionIds_) external nonReentrant onlyProxy {
         for (uint256 i = 0; i < auctionIds_.length; i++) {
             uint256 auctionId = auctionIds_[i];
@@ -452,11 +409,7 @@ contract MarketplaceV1 is
         }
     }
 
-    /// @notice Determines the winners of auctions.
-    /// @param winners_ Auction winner addresses.
-    /// @param winningBids_ Winning bids.
-    /// @param auctionIds_ Auction ids.
-    /// @param signatures_ Signatures to verify the caller's permissions.
+    /// @inheritdoc IMarketplaceV1
     function resolveAuctions(
         address[] calldata winners_, 
         uint256[] calldata winningBids_, 
@@ -492,9 +445,7 @@ contract MarketplaceV1 is
         }
     }
 
-    /// @notice Processes auction payments.
-    /// @param auctionIds_ Auction ids.
-    /// @param isRedemption_ Array of boolean values defining whether the caller wants to redeem auction.
+    /// @inheritdoc IMarketplaceV1
     function processPaymentsForAuctions(
         uint256[] calldata auctionIds_,
         bool[] calldata isRedemption_
@@ -561,22 +512,17 @@ contract MarketplaceV1 is
         }
     } 
 
-    /// @notice Retrieves the current `_saleId` value.
-    /// @return Current `_saleId` value.
+    /// @inheritdoc IMarketplaceV1
     function currentSaleId() external view returns (uint256) {
         return _saleId.current();
     }
 
-    /// @notice Retrieves the current `_auctionId` value.
-    /// @return Current `_auctionId` value.
+    /// @inheritdoc IMarketplaceV1
     function currentAuctionId() external view returns (uint256) {
         return _auctionId.current();
     }
 
-    /// @notice Updates commission recipient addresses and percentages.
-    /// @dev Could be called only by the DEFAULT_ADMIN_ROLE.
-    /// @param commissionRecipientAddresses_ Commission recipient addresses.
-    /// @param commissionRecipientPercentages_ Commission recipient percentages.
+    /// @inheritdoc IMarketplaceV1
     function updateCommissionRecipients(
         address payable[] calldata commissionRecipientAddresses_, 
         uint256[] calldata commissionRecipientPercentages_
@@ -608,24 +554,15 @@ contract MarketplaceV1 is
         emit CommissionRecipientsWereUpdated(m_commissionRecipients, commissionRecipients);
     }
 
-    /// @notice Adds `currencies_` to the list of supported currencies. 
-    /// @dev Could be called only by the DEFAULT_ADMIN_ROLE.
-    /// @param currencies_ Currency addresses.
-    function addSupportedCurrencies(
-        address[] calldata currencies_
-    ) 
-        public 
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    /// @inheritdoc IMarketplaceV1
+    function addSupportedCurrencies(address[] calldata currencies_) public onlyRole(DEFAULT_ADMIN_ROLE) {
         for (uint256 i = 0; i < currencies_.length; i++) {
             isSupportedCurrency[currencies_[i]] = true;
         }
         emit SupportedCurrenciesWereAdded(currencies_);
     }
 
-    /// @notice Returns true if this contract implements the interface defined by `interfaceId_`.
-    /// @param interfaceId_ Interface id.
-    /// @return Boolean value indicating whether this contract implements the interface defined by `interfaceId_`.
+    /// @inheritdoc IERC165Upgradeable
     function supportsInterface(
         bytes4 interfaceId_
     )
@@ -637,7 +574,7 @@ contract MarketplaceV1 is
         return super.supportsInterface(interfaceId_);
     }
 
-    /// @notice Required by the UUPS module.
+    /// @inheritdoc UUPSUpgradeable
     function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /// @notice Processes the payment. Includes royalty split and sales commission.
