@@ -79,15 +79,15 @@ contract MarketplaceV1 is
     /// @inheritdoc IMarketplaceV1
     function updateCommissionPercentage(uint256 commissionPercentage_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (commissionPercentage_ > MAXIMUM_COMMISSION_PERCENTAGE) {
-            revert MaximumCommissionPercentageWasExceeded(commissionPercentage_);
+            revert MaximumCommissionPercentageExceeded(commissionPercentage_);
         }
-        emit CommissionPercentageWasUpdated(commissionPercentage, commissionPercentage_);
+        emit CommissionPercentageUpdated(commissionPercentage, commissionPercentage_);
         commissionPercentage = commissionPercentage_;
     }
 
     /// @inheritdoc IMarketplaceV1
     function updateAuthorizer(address authorizer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        emit AuthorizerWasUpdated(authorizer, authorizer_);
+        emit AuthorizerUpdated(authorizer, authorizer_);
         authorizer = authorizer_;
     }
 
@@ -99,7 +99,7 @@ contract MarketplaceV1 is
             }
             delete isSupportedCurrency[currencies_[i]];
         }
-        emit SupportedCurrenciesWereRemoved(currencies_);
+        emit SupportedCurrenciesRemoved(currencies_);
     }
 
     /// @inheritdoc IMarketplaceV1
@@ -112,7 +112,6 @@ contract MarketplaceV1 is
         bool[] calldata isERC721_
     )
         external
-        onlyProxy
     {
         if (
             paymentCurrencies_.length != tokens_.length || 
@@ -160,12 +159,12 @@ contract MarketplaceV1 is
                 Status.ACTIVE
             );
             _saleId.increment();
-            emit SaleWasCreated(msg.sender, saleId);
+            emit SaleCreated(msg.sender, saleId);
         }
     }
 
     /// @inheritdoc IMarketplaceV1
-    function cancelSales(uint256[] calldata saleIds_) external nonReentrant onlyProxy {
+    function cancelSales(uint256[] calldata saleIds_) external nonReentrant {
         for (uint256 i = 0; i < saleIds_.length; i++) {
             SaleInfo storage saleInfo = sales[saleIds_[i]];
             if (msg.sender != saleInfo.seller) {
@@ -191,7 +190,7 @@ contract MarketplaceV1 is
                 );
             }
             saleInfo.status = Status.CANCELLED;
-            emit SaleWasCancelled(saleIds_[i]);
+            emit SaleCancelled(saleIds_[i]);
         }
     }
 
@@ -203,7 +202,6 @@ contract MarketplaceV1 is
         uint256 saleId_
     )
         external
-        onlyProxy
     {
         if (approvedBuyers_.length != approvedPricesPerToken_.length) {
             revert InvalidArrayLengths();
@@ -229,7 +227,7 @@ contract MarketplaceV1 is
             approvedPricePerTokenBySaleIdAndApprovedBuyer[saleId_][approvedBuyers_[i]] = approvedPricesPerToken_[i];
         }
         notUniqueSignature[signature_] = true;
-        emit SaleWasResolved(approvedBuyers_, approvedPricesPerToken_, saleId_);
+        emit SaleResolved(approvedBuyers_, approvedPricesPerToken_, saleId_);
     }
 
     /// @inheritdoc IMarketplaceV1
@@ -239,8 +237,7 @@ contract MarketplaceV1 is
     ) 
         external 
         payable 
-        nonReentrant 
-        onlyProxy
+        nonReentrant
     {
         if (saleIds_.length != amountsToPurchase_.length) {
             revert InvalidArrayLengths();
@@ -298,7 +295,7 @@ contract MarketplaceV1 is
             unchecked {
                 saleInfo.purchasedAmount += amountToPurchase;
             }
-            emit PaymentForSaleWasProcessed(msg.sender, paymentAmount, saleIds_[i]);
+            emit PaymentForSaleProcessed(msg.sender, paymentAmount, saleIds_[i]);
         }
         if (msg.value > msgValueSpent) {
             payable(msg.sender).sendValue(msg.value - msgValueSpent);
@@ -316,7 +313,6 @@ contract MarketplaceV1 is
         AuctionType[] memory auctionTypes_
     )
         external
-        onlyProxy
     {
         if (
             paymentCurrencies_.length != tokens_.length || 
@@ -373,12 +369,12 @@ contract MarketplaceV1 is
                 auctionTypes_[i]
             );
             _auctionId.increment();
-            emit AuctionWasCreated(msg.sender, auctionId);
+            emit AuctionCreated(msg.sender, auctionId);
         }
     }
 
     /// @inheritdoc IMarketplaceV1
-    function cancelAuctions(uint256[] calldata auctionIds_) external nonReentrant onlyProxy {
+    function cancelAuctions(uint256[] calldata auctionIds_) external nonReentrant {
         for (uint256 i = 0; i < auctionIds_.length; i++) {
             uint256 auctionId = auctionIds_[i];
             AuctionInfo storage auctionInfo = auctions[auctionId];
@@ -405,7 +401,7 @@ contract MarketplaceV1 is
                 );
             }
             auctionInfo.status = Status.CANCELLED;
-            emit AuctionWasCancelled(auctionId);
+            emit AuctionCancelled(auctionId);
         }
     }
 
@@ -417,7 +413,6 @@ contract MarketplaceV1 is
         bytes[] calldata signatures_
     ) 
         external 
-        onlyProxy 
     {
         if (
             winners_.length != winningBids_.length ||
@@ -438,10 +433,10 @@ contract MarketplaceV1 is
             if (auctionInfo.status != Status.ACTIVE) {
                 revert InvalidStatus(auctionInfo.status);
             }
+            notUniqueSignature[signatures_[i]] = true;
             auctionInfo.winner = winners_[i];
             auctionInfo.winningBid = winningBids_[i];
-            notUniqueSignature[signatures_[i]] = true;
-            emit AuctionWasResolved(winners_[i], winningBids_[i], auctionIds_[i]);
+            emit AuctionResolved(winners_[i], winningBids_[i], auctionIds_[i]);
         }
     }
 
@@ -452,8 +447,7 @@ contract MarketplaceV1 is
     )   
         external 
         payable 
-        nonReentrant
-        onlyProxy 
+        nonReentrant 
     {
         if (auctionIds_.length != isRedemption_.length) {
             revert InvalidArrayLengths();
@@ -505,7 +499,7 @@ contract MarketplaceV1 is
                 );
             }
             auctionInfo.status = Status.CLOSED;
-            emit PaymentForAuctionWasProcessed(msg.sender, paymentAmount, auctionIds_[i]);
+            emit PaymentForAuctionProcessed(msg.sender, paymentAmount, auctionIds_[i]);
         }
         if (msg.value > msgValueSpent) {
             payable(msg.sender).sendValue(msg.value - msgValueSpent);
@@ -551,7 +545,7 @@ contract MarketplaceV1 is
                 commissionRecipientPercentages_[i]
             ));
         }
-        emit CommissionRecipientsWereUpdated(m_commissionRecipients, commissionRecipients);
+        emit CommissionRecipientsUpdated(m_commissionRecipients, commissionRecipients);
     }
 
     /// @inheritdoc IMarketplaceV1
@@ -559,7 +553,7 @@ contract MarketplaceV1 is
         for (uint256 i = 0; i < currencies_.length; i++) {
             isSupportedCurrency[currencies_[i]] = true;
         }
-        emit SupportedCurrenciesWereAdded(currencies_);
+        emit SupportedCurrenciesAdded(currencies_);
     }
 
     /// @inheritdoc IERC165Upgradeable

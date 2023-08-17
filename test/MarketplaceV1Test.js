@@ -119,7 +119,7 @@ describe("MarketplaceV1", () => {
             );
         // Attempt to update with exceeded limit percentage
         await expect(marketplace.updateCommissionPercentage(2000))
-            .to.be.revertedWith("MaximumCommissionPercentageWasExceeded");
+            .to.be.revertedWith("MaximumCommissionPercentageExceeded");
         // Successful updating
         await marketplace.updateCommissionPercentage(1000);
         expect(await marketplace.commissionPercentage()).to.equal(1000);
@@ -776,7 +776,7 @@ describe("MarketplaceV1", () => {
         expect(await erc20Mock.balanceOf(owner.address)).to.equal(ownerBalanceBeforeInERC20Currency.add(ONE_ETHER.mul(95).div(100)));
     });
 
-    it("Successful _authorizeUpgrade() execution and onlyProxy checks", async () => {
+    it("Successful _authorizeUpgrade() execution", async () => {
         // Attempt to upgrade from non-granted to DEFAULT_ADMIN_ROLE
         await expect(marketplace.connect(alice).upgradeTo(erc20Mock.address))
             .to.be.revertedWith(
@@ -788,39 +788,5 @@ describe("MarketplaceV1", () => {
         );
         // Successful upgrading
         await expect(marketplace.upgradeTo(implementation.address)).to.emit(marketplace, "Upgraded");
-        // Check onlyProxy modifiers
-        await expect(implementation.createSales(
-            [ethers.constants.AddressZero, ethers.constants.AddressZero],
-            [erc721Mock.address, erc1155Mock.address],
-            [0, 0],
-            [1, 100],
-            [ONE_ETHER, ONE_ETHER],
-            [true, false]
-        )).to.be.revertedWith("Function must be called through delegatecall");
-        await expect(implementation.cancelSales([0])).to.be.revertedWith("Function must be called through delegatecall");
-        await expect(implementation.resolveSale(
-            [owner.address],
-            [ONE_ETHER],
-            await generateSignatureForSale([owner.address], [ONE_ETHER], 0),
-            0
-        )).to.be.revertedWith("Function must be called through delegatecall");
-        await expect(implementation.processPaymentsForSales([0], [0])).to.be.revertedWith("Function must be called through delegatecall");
-        await expect(implementation.createAuctions(
-            [ethers.constants.AddressZero, ethers.constants.AddressZero],
-            [erc721Mock.address, erc1155Mock.address],
-            [0, 0],
-            [1, 100],
-            [ONE_ETHER, ONE_ETHER],
-            [true, false],
-            [1, 1]
-        )).to.be.revertedWith("Function must be called through delegatecall");
-        await expect(implementation.cancelAuctions([0])).to.be.revertedWith("Function must be called through delegatecall");
-        await expect(implementation.resolveAuctions(
-            [owner.address],
-            [ONE_ETHER],
-            [1],
-            [await generateSignatureForAuction(owner, ONE_ETHER, 1)]
-        )).to.be.revertedWith("Function must be called through delegatecall");
-        await expect(implementation.processPaymentsForAuctions([0], [true])).to.be.revertedWith("Function must be called through delegatecall");
     });
 });

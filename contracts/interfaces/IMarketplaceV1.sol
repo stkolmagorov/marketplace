@@ -39,38 +39,34 @@ interface IMarketplaceV1 {
         AuctionType auctionType;
     }
 
-    error MaximumCommissionPercentageWasExceeded(uint256 commissionPercentage);
+    error MaximumCommissionPercentageExceeded(uint256 commissionPercentage);
     error ZeroAddressEntry();
     error InvalidArrayLengths();
     error InvalidAmountOfTokensToSale();
     error UnsupportedCurrencyEntry(address unsupportedCurrency);
     error InvalidCallee();
     error InvalidStatus(Status status);
+    error NotUniqueSignature(bytes notUniqueSignature);
+    error InvalidSignature(bytes invalidSignature);
     error InvalidApprovedPricePerToken();
     error InvalidAmountOfTokensToPurchase();
     error InvalidRedemptionPrice();
-    error NotUniqueSignature(bytes notUniqueSignature);
-    error InvalidSignature(bytes invalidSignature);
     error InvalidAuctionTypeForRedemption(uint256 auctionId);
     error InvalidPercentagesSum();
 
-    event CommissionPercentageWasUpdated(uint256 indexed oldCommissionPercentage, uint256 indexed newCommissionPercentage);
-    event SupportedCurrenciesWereAdded(address[] indexed currencies);
-    event SupportedCurrenciesWereRemoved(address[] indexed currencies);
-    event AuthorizerWasUpdated(address indexed oldAuthorizer, address indexed newAuthorizer);
-    event SaleWasCreated(address indexed seller, uint256 indexed saleId);
-    event SaleWasCancelled(uint256 indexed saleId);
-    event SaleWasResolved(
-        address[] indexed approvedBuyers, 
-        uint256[] indexed approvedPricesPerToken, 
-        uint256 indexed saleId
-    );
-    event PaymentForSaleWasProcessed(address indexed payer, uint256 indexed paymentAmount, uint256 indexed saleId);
-    event AuctionWasCreated(address indexed owner, uint256 indexed auctionId);
-    event AuctionWasCancelled(uint256 indexed auctionId);
-    event AuctionWasResolved(address indexed winner, uint256 indexed winningBid, uint256 indexed auctionId);
-    event PaymentForAuctionWasProcessed(address indexed payer, uint256 indexed paymentAmount, uint256 indexed auctionId);
-    event CommissionRecipientsWereUpdated(
+    event CommissionPercentageUpdated(uint256 indexed oldCommissionPercentage, uint256 indexed newCommissionPercentage);
+    event AuthorizerUpdated(address indexed oldAuthorizer, address indexed newAuthorizer);
+    event SupportedCurrenciesAdded(address[] indexed currencies);
+    event SupportedCurrenciesRemoved(address[] indexed currencies);
+    event SaleCreated(address indexed seller, uint256 indexed saleId);
+    event SaleCancelled(uint256 indexed saleId);
+    event SaleResolved(address[] indexed approvedBuyers, uint256[] indexed approvedPricesPerToken, uint256 indexed saleId);
+    event PaymentForSaleProcessed(address indexed payer, uint256 indexed paymentAmount, uint256 indexed saleId);
+    event AuctionCreated(address indexed owner, uint256 indexed auctionId);
+    event AuctionCancelled(uint256 indexed auctionId);
+    event AuctionResolved(address indexed winner, uint256 indexed winningBid, uint256 indexed auctionId);
+    event PaymentForAuctionProcessed(address indexed payer, uint256 indexed paymentAmount, uint256 indexed auctionId);
+    event CommissionRecipientsUpdated(
         CommissionRecipient[] indexed oldCommissionRecipients,
         CommissionRecipient[] indexed newCommissionRecipients
     );
